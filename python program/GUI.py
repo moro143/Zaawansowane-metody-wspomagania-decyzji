@@ -107,6 +107,7 @@ def guiCategories(places, routes, start, koniec):
                         else:
                             wykresy[p].append(1/points[p][idx])"""
                         fminlist[p] = pheromone_list[p].update(points[p][idx], solutions[idx], fminlist[p])
+                    
                     """plt.plot(wykres1)
                     plt.savefig('1.png')
                     plt.clf()
@@ -122,7 +123,6 @@ def guiCategories(places, routes, start, koniec):
             except:
                 traceback.print_exc()
                 pass
-            print(1)
             points = np.transpose(points)
             a = is_pareto_efficient(points)
             c=0
