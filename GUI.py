@@ -1,30 +1,35 @@
-import PySimpleGUI as sg
 import csv
-import traceback
-from PySimpleGUI.PySimpleGUI import ErrorElement
-import main
-import numpy as np
-import matplotlib.pyplot as plt
-import requests
 import json
 import pickle
-import solutionGUI
 import time
+import traceback
 from statistics import mean
+
+import matplotlib.pyplot as plt
+import numpy as np
+import PySimpleGUI as sg
+import requests
+from PySimpleGUI.PySimpleGUI import ErrorElement
+
 import AHP_GUI
+import main
+import solutionGUI
 
 np.random.seed(453214)
 
-def change(a, i,j, n):
-    a[i][j]=n
-    a[j][i]=1/n
+
+def change(a, i, j, n):
+    a[i][j] = n
+    a[j][i] = 1 / n
+
 
 def pref(a):
     x = np.transpose(a)
     result = []
     for i in x:
-        result.append(i/sum(i))
+        result.append(i / sum(i))
     return np.transpose(result)
+
 
 def wagi(a):
     result = []
@@ -32,18 +37,19 @@ def wagi(a):
         result.append(mean(i))
     return result
 
-def is_pareto_efficient(costs, return_mask = True):
+
+def is_pareto_efficient(costs, return_mask=True):
     is_efficient = np.arange(costs.shape[0])
     n_points = costs.shape[0]
     next_point_index = 0  # Next index in the is_efficient array to search for
-    while next_point_index<len(costs):
-        nondominated_point_mask = np.any(costs<costs[next_point_index], axis=1)
+    while next_point_index < len(costs):
+        nondominated_point_mask = np.any(costs < costs[next_point_index], axis=1)
         nondominated_point_mask[next_point_index] = True
         is_efficient = is_efficient[nondominated_point_mask]  # Remove dominated points
         costs = costs[nondominated_point_mask]
-        next_point_index = np.sum(nondominated_point_mask[:next_point_index])+1
+        next_point_index = np.sum(nondominated_point_mask[:next_point_index]) + 1
     if return_mask:
-        is_efficient_mask = np.zeros(n_points, dtype = bool)
+        is_efficient_mask = np.zeros(n_points, dtype=bool)
         is_efficient_mask[is_efficient] = True
         return is_efficient_mask
     else:
@@ -51,7 +57,7 @@ def is_pareto_efficient(costs, return_mask = True):
 
 
 def guiCategories(places, routes, start, koniec):
-    categoriesLayout = [[sg.Text('Preferencje kategori atrakcji')]]
+    categoriesLayout = [[sg.Text("Category preferences")]]
     places_name = {}
     for i in places:
         places_name[i.name] = i
@@ -62,20 +68,25 @@ def guiCategories(places, routes, start, koniec):
             if c not in all_categories:
                 all_categories.append(c)
     for cat in all_categories:
-        categoriesLayout.append([sg.Text(cat, size=(20, 1)), sg.Spin(values=('1','2','3','4','5'), initial_value='3', key=cat)])
+        categoriesLayout.append(
+            [
+                sg.Text(cat, size=(20, 1)),
+                sg.Spin(values=("1", "2", "3", "4", "5"), initial_value="3", key=cat),
+            ]
+        )
 
-    categoriesLayout.append([sg.Button('Gotowe')])
+    categoriesLayout.append([sg.Button("Done")])
 
-    window = sg.Window("Kategorie", categoriesLayout)
+    window = sg.Window("Categories", categoriesLayout)
 
     while True:
         event, values = window.read()
         if event == "Exit" or event == sg.WIN_CLOSED:
             break
-        if event == 'Gotowe':
+        if event == "Done":
             person = main.Person(all_categories)
             for cat in all_categories:
-                if float(values[cat])!=0:
+                if float(values[cat]) != 0:
                     person.categories_points[cat] = float(values[cat])
                 else:
                     person.categories_points[cat] = float(0.1)
@@ -83,7 +94,12 @@ def guiCategories(places, routes, start, koniec):
             pheromoneCategories = main.Pheromone(places, 0.01, 50)
             pheromonePrice = main.Pheromone(places, 0.01, 50)
             pheromonePopularity = main.Pheromone(places, 0.01, 50)
-            pheromone_list = [pheromoneAttraction, pheromoneCategories, pheromonePrice, pheromonePopularity]
+            pheromone_list = [
+                pheromoneAttraction,
+                pheromoneCategories,
+                pheromonePrice,
+                pheromonePopularity,
+            ]
             colony = main.Colony(100, places[-1], start, koniec)
             fminlist = np.zeros(len(pheromone_list))
             print(0)
@@ -95,9 +111,11 @@ def guiCategories(places, routes, start, koniec):
             try:
                 c = 0
                 for _ in range(500):
-                    c+=1
-                    print(c/500*100)
-                    solutions, points = colony.simulationMulti(places, routes, pheromone_list, person)
+                    c += 1
+                    print(c / 500 * 100)
+                    solutions, points = colony.simulationMulti(
+                        places, routes, pheromone_list, person
+                    )
                     points = np.transpose(points)
                     for p in range(len(points)):
                         idx = np.argmin(points[p])
@@ -106,8 +124,10 @@ def guiCategories(places, routes, start, koniec):
                             wykresy[p].append(points[p][idx])
                         else:
                             wykresy[p].append(1/points[p][idx])"""
-                        fminlist[p] = pheromone_list[p].update(points[p][idx], solutions[idx], fminlist[p])
-                    
+                        fminlist[p] = pheromone_list[p].update(
+                            points[p][idx], solutions[idx], fminlist[p]
+                        )
+
                     """plt.plot(wykres1)
                     plt.savefig('1.png')
                     plt.clf()
@@ -125,12 +145,12 @@ def guiCategories(places, routes, start, koniec):
                 pass
             points = np.transpose(points)
             a = is_pareto_efficient(points)
-            c=0
+            c = 0
             results = []
             for solution_result in solutions:
                 if a[c]:
                     results.append([solution_result, points[c]])
-                c+=1
+                c += 1
             a = AHP_GUI.ahp(pheromone_list)
             """
             a = np.ones([len(pheromone_list),len(pheromone_list)])
@@ -148,18 +168,18 @@ def guiCategories(places, routes, start, koniec):
                 points_.append(np.array(tmp))
             x = []
             for i in points_:
-                x.append(i-max(i))
+                x.append(i - max(i))
             points_ = x
             r = []
             for i in points_:
-                r.append(i/sum(i))
-            #r = np.transpose(r)
+                r.append(i / sum(i))
+            # r = np.transpose(r)
             wagicalosc = []
             for i in range(len(r[0])):
                 tmp = 0
                 for j in range(len(a)):
                     x = r[j][i]
-                    tmp+=(a[j]*x)
+                    tmp += a[j] * x
                 wagicalosc.append(tmp)
             solutionGUI.solutions(results, wagicalosc, start, routes)
-            
+
